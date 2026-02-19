@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where in the World is #67?</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=Inter:wght@400;600;700&display=swap');
+
+:root {
+  --bg-dark: #0a0e17;
+  --bg-panel: #111927;
+  --bg-card: #1a2332;
+  --accent-cyan: #00e5ff;
+  --accent-magenta: #ff006e;
+  --accent-gold: #ffd60a;
+  --accent-green: #00ff87;
+  --text-primary: #e8edf5;
+  --text-dim: #7a8ba7;
+  --text-muted: #4a5568;
+  --border: #2a3a52;
+  --danger: #ff3860;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.scanlines {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+  pointer-events: none;
+  z-index: 999;
+}
+
+.game-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  text-align: center;
+  padding: 20px 0 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 20px rgba(0,229,255,0.4);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.header .subtitle {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-item { display: flex; align-items: center; gap: 6px; }
+.status-label { color: var(--text-dim); }
+.status-value { color: var(--accent-cyan); }
+.status-value.warning { color: var(--accent-gold); }
+.status-value.danger { color: var(--danger); }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.panel-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: var(--accent-gold);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.narrative {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.narrative .highlight { color: var(--accent-cyan); font-weight: 600; }
+.narrative .suspect-clue { color: var(--accent-magenta); font-weight: 600; }
+.narrative .location-name { color: var(--accent-gold); font-weight: 700; }
+
+.witness-box {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent-cyan);
+  padding: 16px 20px;
+  margin: 16px 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.witness-name {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.witness-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+.clue-tracker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.clue-item {
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.clue-item .clue-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.clue-item .clue-value { color: var(--accent-magenta); font-weight: 600; }
+.clue-item.geography .clue-value { color: var(--accent-cyan); }
+.clue-item.culture .clue-value { color: var(--accent-gold); }
+.clue-item.suspect .clue-value { color: var(--accent-magenta); }
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.choice-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 20px;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.choice-btn:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0,229,255,0.05);
+  transform: translateX(4px);
+}
+
+.choice-btn .choice-key {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--accent-cyan);
+  background: rgba(0,229,255,0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  min-width: 28px;
+  text-align: center;
+}
+
+.choice-btn.correct { border-color: var(--accent-green); background: rgba(0,255,135,0.08); }
+.choice-btn.wrong { border-color: var(--danger); background: rgba(255,56,96,0.08); opacity: 0.6; }
+
+.warrant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.warrant-field {
+  background: var(--bg-card);
+  padding: 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.warrant-field label {
+  display: block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.warrant-field select {
+  width: 100%;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.warrant-field select:focus { outline: none; border-color: var(--accent-cyan); }
+
+.action-btn {
+  background: linear-gradient(135deg, var(--accent-cyan), #0088aa);
+  border: none;
+  color: var(--bg-dark);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  padding: 14px 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  display: block;
+  margin: 20px auto 0;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,229,255,0.3);
+}
+
+.action-btn.danger-btn { background: linear-gradient(135deg, var(--accent-magenta), #cc0058); }
+.action-btn.gold-btn { background: linear-gradient(135deg, var(--accent-gold), #cc9900); }
+
+.dossier-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--accent-magenta);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s;
+}
+
+.dossier-toggle:hover { border-color: var(--accent-magenta); background: rgba(255,0,110,0.08); }
+
+.dossier-overlay {
+  display: none;
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: 340px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  padding: 20px;
+  z-index: 200;
+  overflow-y: auto;
+  box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+}
+
+.dossier-overlay.open { display: block; }
+.dossier-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; float: right; }
+
+.dossier-section { margin-bottom: 20px; }
+
+.dossier-section h3 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--accent-magenta);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dossier-entry {
+  font-size: 12px;
+  padding: 6px 0;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(42,58,82,0.5);
+}
+
+.dossier-entry .d-label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; }
+
+.map-trail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.map-stop {
+  background: var(--bg-card);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-cyan);
+  border: 1px solid var(--border);
+}
+
+.map-stop.current { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(255,214,10,0.1); }
+.map-arrow { color: var(--text-muted); font-size: 12px; }
+
+.result-screen { text-align: center; padding: 40px 20px; }
+
+.result-screen .big-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 18px;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.result-screen .big-text.success { color: var(--accent-green); }
+.result-screen .big-text.failure { color: var(--danger); }
+
+.result-screen .result-detail {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  max-width: 600px;
+  margin: 0 auto 24px;
+}
+
+.intro-badge {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 20px;
+  background: radial-gradient(circle, rgba(0,229,255,0.15), transparent 70%);
+  border: 2px solid var(--accent-cyan);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--accent-cyan);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.intro-badge span { display: block; }
+
+.fade-in { animation: fadeIn 0.5s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* MUSIC CONTROLS */
+.music-toggle {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--accent-gold);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s;
+  display: none;
+}
+
+.music-toggle:hover { border-color: var(--accent-gold); background: rgba(255,214,10,0.08); }
+
+@media (max-width: 600px) {
+  .header h1 { font-size: 11px; }
+  .warrant-grid { grid-template-columns: 1fr; }
+  .status-bar { font-size: 10px; }
+  .dossier-overlay { width: 100%; }
+  .clue-tracker { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<button class="music-toggle" id="musicToggle">&#9835; MUSIC: OFF</button>
+<button class="dossier-toggle" id="dossierToggle" style="display:none;">&#128269; DOSSIER</button>
+
+<div class="dossier-overlay" id="dossierPanel">
+  <button class="dossier-close" id="dossierClose">&times;</button>
+  <div id="dossierContent"></div>
+</div>
+
+<div class="game-container" id="gameContainer"></div>
+
+<script>
+// ==================== MUSIC PLAYER (External Audio File) ====================
+// Place your audio file next to this HTML file.
+// Supported: MP3, OGG, WAV
+// Rename it to "noir-theme.mp3" (or update the filename below)
+const NoirMusic = (() => {
+  const FILENAMES = ['noir-theme.mp3', 'noir-theme.ogg', 'noir-theme.wav'];
+  let audio = null;
+  let playing = false;
+  let loaded = false;
+  let triedLoad = false;
+
+  function init() {
+    if (triedLoad) return;
+    triedLoad = true;
+    audio = new Audio();
+    audio.loop = true;
+    audio.volume = 0.35;
+
+    // Try each filename in order
+    let idx = 0;
+    function tryNext() {
+      if (idx >= FILENAMES.length) {
+        loaded = false;
+        console.warn('No music file found. Place noir-theme.mp3 next to this HTML file.');
+        return;
+      }
+      audio.src = FILENAMES[idx];
+      audio.load();
+    }
+
+    audio.addEventListener('canplaythrough', () => { loaded = true; }, { once: false });
+    audio.addEventListener('error', () => { idx++; tryNext(); });
+
+    tryNext();
+  }
+
+  function start() {
+    if (!audio) init();
+    if (playing) return;
+    if (audio) {
+      const p = audio.play();
+      if (p && p.catch) p.catch(() => {});
+      playing = true;
+    }
+  }
+
+  function stop() {
+    if (audio) { audio.pause(); }
+    playing = false;
+  }
+
+  function toggle() {
+    if (!audio) init();
+    if (playing) stop(); else start();
+    return playing;
+  }
+
+  function setVolume(v) { if (audio) audio.volume = Math.max(0, Math.min(1, v)); }
+
+  return { toggle, isPlaying: () => playing, setVolume, init };
+})();
+
+// Music button
+const musicBtn = document.getElementById('musicToggle');
+musicBtn.addEventListener('click', () => {
+  const on = NoirMusic.toggle();
+  musicBtn.innerHTML = on ? '&#9835; MUSIC: ON' : '&#9835; MUSIC: OFF';
+  musicBtn.style.borderColor = on ? 'var(--accent-gold)' : 'var(--border)';
+});
+
+// ==================== GAME DATA ====================
+const GAME = {
+  suspectsDB: [
+    { name: "Shadow Fox", hair: "red", hobby: "chess", food: "sushi", accessory: "scarf" },
+    { name: "Nightingale", hair: "black", hobby: "painting", food: "croissants", accessory: "monocle" },
+    { name: "The Cipher", hair: "blonde", hobby: "violin", food: "tacos", accessory: "leather gloves" },
+    { name: "Phantom Ace", hair: "brown", hobby: "chess", food: "croissants", accessory: "top hat" },
+  ],
+  culprit: null,
+  collectedClues: { geography: [], culture: [], suspect: [] },
+  trail: ["Perkins, OK"],
+  currentStop: 0,
+
+  stops: [
+    { id: "perkins", name: "Perkins, Oklahoma", type: "intro" },
+    {
+      id: "tokyo", name: "Tokyo, Japan", flag: "\u{1F1EF}\u{1F1F5}",
+      witnesses: [
+        {
+          name: "Officer Tanaka \u2014 Tokyo Metro Police",
+          text: `Someone matching your description came through Shibuya Station in a hurry. They were muttering about needing to catch a bullet train \u2014 not the <span class="highlight">Shinkansen</span>, but a flight. They said they were heading somewhere famous for its ancient <span class="highlight">pyramids</span>.`,
+          clueType: "geography", clue: "Next destination has famous pyramids"
+        },
+        {
+          name: "Yuki \u2014 Convenience Store Clerk",
+          text: `Oh yes! A strange foreigner bought three rice balls and a postcard of Mount Fuji. They were wearing <span class="suspect-clue">a monocle</span> \u2014 very dramatic for a konbini at 2 AM. Japan has over <span class="highlight">6,800 islands</span>, but they said they were done with islands. The cashier next door said they overheard the name <span class="suspect-clue">"Nightingale"</span> on a phone call.`,
+          clueType: "suspect", clue: "Suspect wears a monocle; name 'Nightingale' overheard"
+        },
+        {
+          name: "Professor Sato \u2014 Tokyo University",
+          text: `I spotted someone at the <span class="highlight">Meiji Shrine</span> who seemed very out of place \u2014 they were sketching the torii gate. Said something about how <span class="highlight">Japanese calligraphy</span> reminded them of their hobby... <span class="suspect-clue">painting</span>, I believe they said.`,
+          clueType: "suspect", clue: "Suspect's hobby is painting"
+        }
+      ],
+      nextCorrect: "cairo",
+      nextChoices: ["london", "cairo", "rio"],
+      nextLabels: { cairo: "Cairo, Egypt \u{1F1EA}\u{1F1EC}", rio: "Rio de Janeiro, Brazil \u{1F1E7}\u{1F1F7}", london: "London, England \u{1F1EC}\u{1F1E7}" }
+    },
+    {
+      id: "cairo", name: "Cairo, Egypt", flag: "\u{1F1EA}\u{1F1EC}",
+      witnesses: [
+        {
+          name: "Dr. Amira \u2014 Museum of Egyptian Antiquities",
+          text: `Someone was asking very specific questions about the <span class="highlight">Rosetta Stone</span> \u2014 which is actually in London, not here. They seemed educated but reckless. Egypt sits on two continents \u2014 Africa and, through the <span class="highlight">Sinai Peninsula</span>, Asia. They said they were heading to a city famous for its <span class="highlight">carnival and samba</span>.`,
+          clueType: "geography", clue: "Next stop: city famous for carnival and samba"
+        },
+        {
+          name: "Hassan \u2014 Felucca Captain, Nile River",
+          text: `I gave a tourist a boat ride past the <span class="highlight">Great Pyramid of Giza</span> \u2014 the last surviving Wonder of the Ancient World. They kept going on about how the <span class="highlight">Nile flows north</span>, which most people get wrong. They were eating <span class="suspect-clue">croissants</span> they'd brought in their bag \u2014 very odd on a felucca.`,
+          clueType: "suspect", clue: "Suspect's favorite food is croissants"
+        },
+        {
+          name: "Fatima \u2014 Shopkeeper, Khan el-Khalili Bazaar",
+          text: `A suspicious character bought a <span class="highlight">papyrus scroll</span> and haggled in three different languages. The <span class="highlight">Arabic word for Egypt is Misr</span>. They left behind a receipt from their hotel \u2014 the name on it was smudged, but I could make out what looked like <span class="suspect-clue">"N-i-g-h..."</span> before it trailed off. And <span class="suspect-clue">#67</span> was written on the back with a tiny sketch of a paintbrush.`,
+          clueType: "culture", clue: "Arabic name for Egypt is Misr; receipt shows name starting with 'Nigh...'"
+        }
+      ],
+      nextCorrect: "rio",
+      nextChoices: ["paris", "rio", "tokyo"],
+      nextLabels: { rio: "Rio de Janeiro, Brazil \u{1F1E7}\u{1F1F7}", paris: "Paris, France \u{1F1EB}\u{1F1F7}", tokyo: "Tokyo, Japan \u{1F1EF}\u{1F1F5}" }
+    },
+    {
+      id: "rio", name: "Rio de Janeiro, Brazil", flag: "\u{1F1E7}\u{1F1F7}",
+      witnesses: [
+        {
+          name: "Coach Silva \u2014 Maracan\u00e3 Stadium",
+          text: `Someone snuck into the stadium during a <span class="highlight">futebol</span> match \u2014 that's what we call soccer here. Brazil has won the <span class="highlight">FIFA World Cup five times</span>, more than any other nation. They were babbling about needing to see the <span class="highlight">Northern Lights</span> next. Very strange thing to say in 35\u00b0C heat.`,
+          clueType: "geography", clue: "Next destination: where you can see Northern Lights"
+        },
+        {
+          name: "Maria \u2014 Guide at Christ the Redeemer",
+          text: `The <span class="highlight">Cristo Redentor</span> stands 30 meters tall atop <span class="highlight">Corcovado Mountain</span>. A tourist up here was <span class="suspect-clue">painting</span> a watercolor of the view \u2014 quite talented actually. They dropped a candy wrapper. The label was in a <span class="highlight">Scandinavian language</span>.`,
+          clueType: "suspect", clue: "Confirms suspect paints; Scandinavian connection"
+        },
+        {
+          name: "Pedro \u2014 Taxi Driver",
+          text: `I drove someone from <span class="highlight">Copacabana Beach</span> to the airport. Brazil is the <span class="highlight">largest country in South America</span> and the only one that speaks <span class="highlight">Portuguese</span> \u2014 not Spanish! They said something about how their <span class="suspect-clue">black hair</span> would keep them warm where they were going. When they paid, I saw a monogrammed luggage tag that read <span class="suspect-clue">"N.G."</span>`,
+          clueType: "suspect", clue: "Suspect has black hair; initials 'N.G.'"
+        }
+      ],
+      nextCorrect: "reykjavik",
+      nextChoices: ["sydney", "reykjavik", "cairo"],
+      nextLabels: { reykjavik: "Reykjavik, Iceland \u{1F1EE}\u{1F1F8}", cairo: "Cairo, Egypt \u{1F1EA}\u{1F1EC}", sydney: "Sydney, Australia \u{1F1E6}\u{1F1FA}" }
+    },
+    {
+      id: "reykjavik", name: "Reykjavik, Iceland", flag: "\u{1F1EE}\u{1F1F8}",
+      witnesses: [
+        {
+          name: "Bj\u00f6rk (not that one) \u2014 Hallgr\u00edmskirkja Guide",
+          text: `Iceland sits on the <span class="highlight">Mid-Atlantic Ridge</span> \u2014 we're literally splitting between the North American and Eurasian tectonic plates. A visitor came by <span class="highlight">Hallgr\u00edmskirkja</span>, our famous church, and asked about flights to somewhere with <span class="highlight">the Eiffel Tower</span>. Not very subtle for a fugitive.`,
+          clueType: "geography", clue: "Next destination has the Eiffel Tower"
+        },
+        {
+          name: "\u00d3lafur \u2014 Blue Lagoon Attendant",
+          text: `Iceland is powered almost entirely by <span class="highlight">geothermal and hydroelectric energy</span> \u2014 one of the greenest countries on Earth. A guest at the lagoon was wearing <span class="suspect-clue">a monocle</span> that kept fogging up in the steam. They said they missed their favorite snack \u2014 <span class="suspect-clue">croissants</span> \u2014 and knew exactly where to get the best ones.`,
+          clueType: "suspect", clue: "Confirms monocle and croissant preference"
+        },
+        {
+          name: "Sigrid \u2014 Bookstore Owner",
+          text: `Did you know Icelanders publish more <span class="highlight">books per capita</span> than any other country? A customer bought a travel guide and paid with euros \u2014 we use the <span class="highlight">Icelandic kr\u00f3na</span> here. They were sketching <span class="suspect-clue">portraits in a leather-bound notebook</span>. I asked their name and they smirked and said, <span class="suspect-clue">"You can call me the Nightingale."</span>`,
+          clueType: "culture", clue: "Iceland uses kr\u00f3na; suspect calls themselves 'Nightingale'"
+        }
+      ],
+      nextCorrect: "paris",
+      nextChoices: ["rio", "london", "paris"],
+      nextLabels: { paris: "Paris, France \u{1F1EB}\u{1F1F7}", london: "London, England \u{1F1EC}\u{1F1E7}", rio: "Rio de Janeiro, Brazil \u{1F1E7}\u{1F1F7}" }
+    },
+    {
+      id: "paris", name: "Paris, France", flag: "\u{1F1EB}\u{1F1F7}", type: "final",
+      witnesses: [
+        {
+          name: "Inspector Dupont \u2014 Interpol Liaison",
+          text: `We've tracked your suspect to the <span class="highlight">Louvre Museum</span>. France is the most <span class="highlight">visited country in the world</span> \u2014 over 90 million tourists per year. Your thief blends in well, but our cameras caught someone matching your description near the <span class="highlight">Mona Lisa</span>. Our facial recognition flagged the alias <span class="suspect-clue">"Nightingale"</span> in three international databases.`,
+          clueType: "geography", clue: "France: most visited country; alias 'Nightingale' confirmed by Interpol"
+        },
+        {
+          name: "Claire \u2014 Caf\u00e9 Owner, Montmartre",
+          text: `A person sat in my caf\u00e9 all morning eating <span class="suspect-clue">croissants</span> and <span class="suspect-clue">painting</span> the <span class="highlight">Sacr\u00e9-C\u0153ur</span>. They had <span class="suspect-clue">black hair</span> and wore <span class="suspect-clue">a monocle</span>. Montmartre has been the home of artists since <span class="highlight">Toulouse-Lautrec and Picasso</span>. This person seemed to belong here \u2014 but their hands were shaking. Nervous, perhaps?`,
+          clueType: "suspect", clue: "All physical traits confirmed at final location"
+        },
+        {
+          name: "Jean-Pierre \u2014 Street Musician",
+          text: `The <span class="highlight">French national motto</span> is <em>Libert\u00e9, \u00c9galit\u00e9, Fraternit\u00e9</em>. Someone fitting your description tipped me 50 euros and said, <em>"Enjoy your freedom while it lasts."</em> They walked toward the <span class="highlight">Seine River</span>. I heard someone else call after them: <span class="suspect-clue">"Nightingale, wait!"</span> I think they know you're coming.`,
+          clueType: "culture", clue: "French motto: Libert\u00e9, \u00c9galit\u00e9, Fraternit\u00e9; name 'Nightingale' confirmed"
+        }
+      ]
+    }
+  ]
+};
+
+GAME.culprit = GAME.suspectsDB[1]; // Nightingale
+
+// ==================== STATE ====================
+let state = {
+  phase: "intro",
+  stopIndex: 0,
+  witnessIndex: 0,
+  clues: { geography: [], culture: [], suspect: [] },
+  trail: ["Perkins, OK"],
+  timeLeft: 12,
+  warrantCorrect: false,
+  visitedWitnesses: [],
+  feedback: null
+};
+
+// ==================== RENDER ====================
+const $ = id => document.getElementById(id);
+const container = $('gameContainer');
+
+function render() {
+  switch(state.phase) {
+    case "intro": renderIntro(); break;
+    case "briefing": renderBriefing(); break;
+    case "travel": renderTravel(); break;
+    case "witness": renderWitness(); break;
+    case "choose": renderChoose(); break;
+    case "warrant": renderWarrant(); break;
+    case "result": renderResult(); break;
+  }
+  updateDossier();
+}
+
+function renderIntro() {
+  $('dossierToggle').style.display = 'none';
+  $('musicToggle').style.display = 'block';
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">A Perkins-Tryon Detective Agency Case</div>
+    </div>
+    <div class="panel fade-in" style="text-align:center; flex:1; display:flex; flex-direction:column; justify-content:center;">
+      <div class="intro-badge"><div><span>PTDA</span><span style="font-size:7px;margin-top:4px;">ROOKIE</span></div></div>
+      <div class="narrative" style="max-width:600px; margin:0 auto 24px;">
+        It's a normal Tuesday in <span class="location-name">Mr. Martin's geography class</span> at Perkins-Tryon Middle School. The bell rings. You walk in. Something is wrong.
+        <br><br>
+        The walls are bare. Every single one of Mr. Martin's <span class="highlight">license plates</span> \u2014 collected from all 50 states and a dozen countries \u2014 has been stolen. In their place: a single sticky note.
+        <br><br>
+        It reads:
+      </div>
+      <div style="background:var(--bg-card); border:2px solid var(--accent-magenta); border-radius:8px; padding:20px; max-width:400px; margin:0 auto 24px; transform:rotate(-1deg);">
+        <div style="font-family:'Share Tech Mono',monospace; color:var(--accent-magenta); font-size:14px; line-height:1.8;">
+          "Geography is wasted on these walls.<br>
+          I'll show the world where they belong.<br>
+          Catch me if you can learn fast enough.<br><br>
+          \u2014 <span style="font-size:18px; font-weight:bold;">#67</span>"
+        </div>
+      </div>
+      <div class="narrative" style="max-width:600px; margin:0 auto 24px;">
+        Mr. Martin looks at the class. <em>"Well,"</em> he says, adjusting his glasses,
+        <em>"I guess today's lesson just became... interactive."</em>
+        <br><br>
+        He slides you a badge across his desk.
+      </div>
+      <button class="action-btn" onclick="startBriefing()">ACCEPT THE CASE</button>
+    </div>
+  `;
+}
+
+function startBriefing() { state.phase = "briefing"; render(); }
+
+function renderBriefing() {
+  $('dossierToggle').style.display = 'block';
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">Case Briefing</div>
+    </div>
+    <div class="panel fade-in">
+      <div class="panel-title">&#128225; Incoming Transmission \u2014 Mr. Martin</div>
+      <div class="narrative">
+        <em>"Alright, detective. Here's what we know."</em>
+        <br><br>
+        The thief known only as <span class="suspect-clue">#67</span> has fled Perkins-Tryon with the entire license plate collection. Interpol has flagged activity matching #67 in several international cities.
+        <br><br>
+        Your job: follow the trail, interview witnesses at each location, and gather enough clues to identify and arrest #67 before they disappear for good.
+        <br><br>
+        You have <span class="highlight">${state.timeLeft} time units</span> before the trail goes cold.
+        <br><br>
+        At each stop, you'll talk to <span class="highlight">three witnesses</span>. Each one will give you:
+      </div>
+      <div class="clue-tracker">
+        <div class="clue-item geography"><div class="clue-label">Type 1</div><div class="clue-value">Geography Clue</div>Where to go next</div>
+        <div class="clue-item culture"><div class="clue-label">Type 2</div><div class="clue-value">Culture/History Clue</div>Learn about the world</div>
+        <div class="clue-item suspect"><div class="clue-label">Type 3</div><div class="clue-value">Suspect Trait</div>Who is #67?</div>
+      </div>
+      <div class="narrative">
+        We've narrowed it down to <span class="highlight">four suspects</span>. Check your dossier (top right) at any time.
+        <br><br>
+        When you reach the final stop, you'll need to <span class="suspect-clue">issue an arrest warrant</span>. You must identify the correct suspect by <em>name</em> and <em>traits</em>. Pick the wrong person? #67 escapes.
+        <br><br>
+        <em>"The first clue points to a country known for its cherry blossoms, bullet trains, and the world's busiest pedestrian crossing. Good luck, rookie."</em>
+      </div>
+      <button class="action-btn" onclick="beginChase()">BEGIN THE CHASE</button>
+    </div>
+  `;
+}
+
+function beginChase() {
+  state.phase = "travel";
+  state.stopIndex = 1;
+  state.trail.push(GAME.stops[1].name);
+  render();
+}
+
+function getArrivalText(id) {
+  const t = {
+    tokyo: "The neon glow of Shibuya hits your eyes before you even leave the airport terminal. Tokyo is one of the most populated metropolitan areas on Earth \u2014 over 37 million people. Somewhere in this sea of faces, someone saw #67.",
+    cairo: "The dry heat hits you as you step onto the tarmac. The silhouette of the pyramids is faintly visible through the haze. Cairo \u2014 one of the oldest cities in the world \u2014 holds secrets. And hopefully, witnesses.",
+    rio: "The sound of samba drifts from somewhere beyond the terminal. Sugarloaf Mountain rises in the distance. Rio de Janeiro \u2014 the Marvelous City. But you're not here for the view.",
+    reykjavik: "The cold air bites instantly. Iceland \u2014 a volcanic island just below the Arctic Circle. The sky has an eerie twilight glow. Reykjavik is the northernmost capital city in the world. #67 is getting bold.",
+    paris: "The City of Light. The trail ends here. Every clue, every witness, every flight has led to this moment. Somewhere in Paris, #67 is waiting. But are you ready?"
+  };
+  return t[id] || "";
+}
+
+function renderTravel() {
+  const stop = GAME.stops[state.stopIndex];
+  const visitedHere = state.visitedWitnesses.filter(v => v.startsWith(state.stopIndex + '-')).length;
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">Pursuit in Progress</div>
+    </div>
+    ${renderStatusBar()}
+    ${renderTrail()}
+    <div class="panel fade-in">
+      <div class="panel-title">${stop.flag || '\u{1F4CD}'} Arriving: ${stop.name}</div>
+      <div class="narrative">
+        Your plane touches down in <span class="location-name">${stop.name}</span>.
+        ${getArrivalText(stop.id)}
+        <br><br>
+        You have <span class="highlight">three witnesses</span> to interview. Each one may have seen #67 \u2014 and each one knows something that could help you track them down.
+      </div>
+      <div class="choices">
+        ${stop.witnesses.map((w, i) => {
+          const visited = state.visitedWitnesses.includes(state.stopIndex + '-' + i);
+          return `<button class="choice-btn ${visited ? 'correct' : ''}" onclick="talkToWitness(${i})">
+            <span class="choice-key">${visited ? '\u2713' : (i+1)}</span>
+            <span>${w.name}${visited ? ' (interviewed)' : ''}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      ${visitedHere >= 2 ? `
+        <button class="action-btn gold-btn" style="margin-top:16px;" onclick="readyToChoose()">
+          ${stop.type === 'final' ? 'ISSUE ARREST WARRANT' : 'CHOOSE NEXT DESTINATION'}
+        </button>
+      ` : `
+        <div style="text-align:center; margin-top:16px; font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text-dim);">
+          Interview at least 2 witnesses before moving on.
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function talkToWitness(index) {
+  state.witnessIndex = index;
+  state.phase = "witness";
+  const key = state.stopIndex + '-' + index;
+  if (!state.visitedWitnesses.includes(key)) {
+    state.visitedWitnesses.push(key);
+    const stop = GAME.stops[state.stopIndex];
+    const w = stop.witnesses[index];
+    state.clues[w.clueType].push({ location: stop.name, clue: w.clue });
+  }
+  render();
+}
+
+function renderWitness() {
+  const stop = GAME.stops[state.stopIndex];
+  const w = stop.witnesses[state.witnessIndex];
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">${stop.flag} ${stop.name}</div>
+    </div>
+    ${renderStatusBar()}
+    <div class="panel fade-in">
+      <div class="panel-title">&#128483; Witness Interview</div>
+      <div class="witness-box">
+        <div class="witness-name">${w.name}</div>
+        <div class="witness-text">${w.text}</div>
+      </div>
+      <div class="clue-tracker">
+        <div class="clue-item ${w.clueType}">
+          <div class="clue-label">Clue Recorded \u2014 ${w.clueType}</div>
+          <div class="clue-value">${w.clue}</div>
+        </div>
+      </div>
+      <button class="action-btn" onclick="backToTravel()">BACK TO LOCATION</button>
+    </div>
+  `;
+}
+
+function backToTravel() { state.phase = "travel"; render(); }
+
+function readyToChoose() {
+  const stop = GAME.stops[state.stopIndex];
+  if (stop.type === 'final') { state.phase = "warrant"; }
+  else { state.phase = "choose"; }
+  render();
+}
+
+function renderChoose() {
+  const stop = GAME.stops[state.stopIndex];
+  // Use the pre-shuffled nextChoices array
+  const choices = stop.nextChoices;
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">Choose Your Destination</div>
+    </div>
+    ${renderStatusBar()}
+    <div class="panel fade-in">
+      <div class="panel-title">&#9992; Where did #67 go next?</div>
+      <div class="narrative">
+        Based on the clues you've gathered in <span class="location-name">${stop.name}</span>, where should you fly next?
+        <br><br>
+        Choose carefully \u2014 a wrong destination costs you <span class="highlight">2 extra time units</span>.
+      </div>
+      ${state.feedback ? `
+        <div style="background:rgba(255,56,96,0.1); border:1px solid var(--danger); border-radius:6px; padding:14px; margin-bottom:16px;">
+          <div style="color:var(--danger); font-weight:600; margin-bottom:4px;">Wrong destination!</div>
+          <div style="color:var(--text-primary); font-size:13px;">${state.feedback}</div>
+        </div>
+      ` : ''}
+      <div class="choices">
+        ${choices.map((id, i) => `
+          <button class="choice-btn" onclick="chooseDestination('${id}')">
+            <span class="choice-key">${String.fromCharCode(65 + i)}</span>
+            <span>${stop.nextLabels[id]}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function chooseDestination(id) {
+  const stop = GAME.stops[state.stopIndex];
+  if (id === stop.nextCorrect) {
+    state.feedback = null;
+    state.timeLeft -= 1;
+    const nextIndex = GAME.stops.findIndex(s => s.id === id);
+    state.stopIndex = nextIndex;
+    state.trail.push(GAME.stops[nextIndex].name);
+    state.phase = "travel";
+  } else {
+    state.timeLeft -= 2;
+    state.feedback = "That's not where the clues point. Review your geography clues and try again. (-2 time units)";
+    if (state.timeLeft <= 0) {
+      state.phase = "result";
+      state.warrantCorrect = false;
+    } else {
+      state.phase = "choose";
+    }
+  }
+  render();
+}
+
+function renderWarrant() {
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">Issue Arrest Warrant</div>
+    </div>
+    ${renderStatusBar()}
+    <div class="panel fade-in">
+      <div class="panel-title">&#128220; Arrest Warrant \u2014 Suspect #67</div>
+      <div class="narrative">
+        You've reached the end of the trail. It's time to issue your arrest warrant. Based on <em>all</em> the suspect clues you've gathered, identify #67.
+        <br><br>
+        <strong>Get it right:</strong> #67 is apprehended and Mr. Martin's license plates are recovered.
+        <br><strong>Get it wrong:</strong> #67 escapes. The plates are gone forever.
+      </div>
+      <div style="margin:20px 0;">
+        <div class="panel-title" style="color:var(--accent-cyan); font-size:9px;">Your Collected Suspect Clues</div>
+        <div class="clue-tracker">
+          ${state.clues.suspect.map(c => `
+            <div class="clue-item suspect">
+              <div class="clue-label">${c.location}</div>
+              <div class="clue-value">${c.clue}</div>
+            </div>
+          `).join('')}
+          ${state.clues.culture.filter(c => c.clue.toLowerCase().includes('nightingale') || c.clue.toLowerCase().includes('nigh')).map(c => `
+            <div class="clue-item culture">
+              <div class="clue-label">${c.location} (name clue)</div>
+              <div class="clue-value">${c.clue}</div>
+            </div>
+          `).join('')}
+          ${state.clues.geography.filter(c => c.clue.toLowerCase().includes('nightingale')).map(c => `
+            <div class="clue-item geography">
+              <div class="clue-label">${c.location} (name clue)</div>
+              <div class="clue-value">${c.clue}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="warrant-grid">
+        <div class="warrant-field">
+          <label>Suspect Name</label>
+          <select id="w-name">
+            <option value="">\u2014 Select \u2014</option>
+            ${GAME.suspectsDB.map(s => `<option value="${s.name}">${s.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="warrant-field">
+          <label>Hair Color</label>
+          <select id="w-hair">
+            <option value="">\u2014 Select \u2014</option>
+            <option value="red">Red</option>
+            <option value="black">Black</option>
+            <option value="blonde">Blonde</option>
+            <option value="brown">Brown</option>
+          </select>
+        </div>
+        <div class="warrant-field">
+          <label>Hobby</label>
+          <select id="w-hobby">
+            <option value="">\u2014 Select \u2014</option>
+            <option value="chess">Chess</option>
+            <option value="painting">Painting</option>
+            <option value="violin">Violin</option>
+          </select>
+        </div>
+        <div class="warrant-field">
+          <label>Favorite Food</label>
+          <select id="w-food">
+            <option value="">\u2014 Select \u2014</option>
+            <option value="sushi">Sushi</option>
+            <option value="croissants">Croissants</option>
+            <option value="tacos">Tacos</option>
+          </select>
+        </div>
+        <div class="warrant-field">
+          <label>Accessory</label>
+          <select id="w-accessory">
+            <option value="">\u2014 Select \u2014</option>
+            <option value="scarf">Scarf</option>
+            <option value="monocle">Monocle</option>
+            <option value="leather gloves">Leather Gloves</option>
+            <option value="top hat">Top Hat</option>
+          </select>
+        </div>
+      </div>
+      <button class="action-btn danger-btn" onclick="issueWarrant()">ISSUE WARRANT</button>
+    </div>
+  `;
+}
+
+function issueWarrant() {
+  const fields = ['w-hair','w-hobby','w-food','w-accessory','w-name'];
+  const vals = {};
+  for (const f of fields) {
+    vals[f] = document.getElementById(f).value;
+    if (!vals[f]) { alert("Complete all fields before issuing the warrant!"); return; }
+  }
+  const c = GAME.culprit;
+  state.warrantCorrect = (
+    vals['w-hair'] === c.hair &&
+    vals['w-hobby'] === c.hobby &&
+    vals['w-food'] === c.food &&
+    vals['w-accessory'] === c.accessory &&
+    vals['w-name'] === c.name
+  );
+  state.phase = "result";
+  render();
+}
+
+function renderResult() {
+  const success = state.warrantCorrect && state.timeLeft > 0;
+  container.innerHTML = `
+    <div class="header">
+      <h1>WHERE IN THE WORLD IS #67?</h1>
+      <div class="subtitle">Case ${success ? 'Closed' : 'Failed'}</div>
+    </div>
+    <div class="panel fade-in">
+      <div class="result-screen">
+        ${success ? `
+          <div class="big-text success">CASE CLOSED</div>
+          <div class="result-detail">
+            You cornered <span style="color:var(--accent-magenta); font-weight:700;">Nightingale</span> \u2014 the mysterious #67 \u2014 at a caf\u00e9 in Montmartre, Paris. They were mid-croissant when you slapped the warrant down.
+            <br><br>
+            <em>"Impressive,"</em> they said, adjusting their monocle. <em>"Most people never make it past Cairo."</em>
+            <br><br>
+            Mr. Martin's license plates have been recovered \u2014 all 62 of them \u2014 and are being shipped back to Perkins-Tryon Middle School.
+            <br><br>
+            Mr. Martin grins. <em>"Not bad for a Tuesday. You've earned an A in geography... and detective work."</em>
+          </div>
+          <div style="margin:20px 0;">
+            <div style="font-family:'Press Start 2P',monospace; font-size:12px; color:var(--accent-gold); margin-bottom:8px;">YOUR RANK</div>
+            <div style="font-size:20px; font-weight:700; color:var(--accent-cyan);">Junior Detective, First Class</div>
+            <div style="font-size:13px; color:var(--text-dim); margin-top:8px;">Time remaining: ${state.timeLeft} units | Stops: ${state.trail.length}</div>
+          </div>
+          <div style="background:var(--bg-card); border-radius:8px; padding:16px; max-width:500px; margin:16px auto;">
+            <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Your Route</div>
+            <div style="font-size:13px; color:var(--accent-cyan);">${state.trail.join(' \u2192 ')}</div>
+          </div>
+        ` : `
+          <div class="big-text failure">${state.timeLeft <= 0 ? 'TIME EXPIRED' : 'WRONG WARRANT'}</div>
+          <div class="result-detail">
+            ${state.timeLeft <= 0 ?
+              "#67 slipped away while you chased false leads. The trail has gone cold." :
+              "You issued a warrant for the wrong suspect. While you were detaining an innocent person, the real #67 \u2014 <strong>Nightingale</strong> \u2014 vanished into the Paris underground."
+            }
+            <br><br>
+            Mr. Martin sighs. <em>"Geography matters, detective. Every clue was there. Every fact pointed to the answer."</em>
+            <br><br>
+            The plates are still missing. But the case file stays open.
+          </div>
+          <div style="margin:20px 0; background:var(--bg-card); border-radius:8px; padding:16px; max-width:500px; margin:16px auto;">
+            <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--text-dim); margin-bottom:8px;">THE CORRECT SUSPECT</div>
+            <div style="font-size:14px; color:var(--accent-magenta); font-weight:600;">Nightingale</div>
+            <div style="font-size:12px; color:var(--text-primary); margin-top:8px;">Black hair \u2022 Painter \u2022 Loves croissants \u2022 Wears a monocle</div>
+          </div>
+        `}
+        <button class="action-btn" onclick="resetGame()">PLAY AGAIN</button>
+      </div>
+    </div>
+  `;
+}
+
+function resetGame() {
+  state = {
+    phase: "intro", stopIndex: 0, witnessIndex: 0,
+    clues: { geography: [], culture: [], suspect: [] },
+    trail: ["Perkins, OK"], timeLeft: 12,
+    warrantCorrect: false, visitedWitnesses: [], feedback: null
+  };
+  render();
+}
+
+// ==================== UI HELPERS ====================
+function renderStatusBar() {
+  const tc = state.timeLeft <= 3 ? 'danger' : state.timeLeft <= 6 ? 'warning' : '';
+  return `<div class="status-bar">
+    <div class="status-item"><span class="status-label">LOCATION:</span> <span class="status-value">${GAME.stops[state.stopIndex]?.name || 'Unknown'}</span></div>
+    <div class="status-item"><span class="status-label">TIME LEFT:</span> <span class="status-value ${tc}">${state.timeLeft} units</span></div>
+    <div class="status-item"><span class="status-label">CLUES:</span> <span class="status-value">${state.clues.suspect.length + state.clues.geography.length + state.clues.culture.length}</span></div>
+  </div>`;
+}
+
+function renderTrail() {
+  return `<div class="map-trail">
+    ${state.trail.map((t, i) => `
+      <span class="map-stop ${i === state.trail.length - 1 ? 'current' : ''}">${t.split(',')[0]}</span>
+      ${i < state.trail.length - 1 ? '<span class="map-arrow">\u2192</span>' : ''}
+    `).join('')}
+  </div>`;
+}
+
+function updateDossier() {
+  $('dossierContent').innerHTML = `
+    <div class="dossier-section">
+      <h3>Suspects</h3>
+      ${GAME.suspectsDB.map(s => `
+        <div class="dossier-entry" style="padding:8px 0;">
+          <div style="font-weight:600; color:var(--accent-magenta);">${s.name}</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">
+            Hair: ${s.hair} \u2022 Hobby: ${s.hobby} \u2022 Food: ${s.food} \u2022 Accessory: ${s.accessory}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="dossier-section">
+      <h3>Suspect Clues</h3>
+      ${state.clues.suspect.length === 0 ? '<div class="dossier-entry" style="color:var(--text-muted);">No suspect clues yet.</div>' :
+        state.clues.suspect.map(c => `<div class="dossier-entry"><div class="d-label">${c.location}</div><div style="color:var(--accent-magenta);">${c.clue}</div></div>`).join('')}
+    </div>
+    <div class="dossier-section">
+      <h3>Geography Clues</h3>
+      ${state.clues.geography.length === 0 ? '<div class="dossier-entry" style="color:var(--text-muted);">No geography clues yet.</div>' :
+        state.clues.geography.map(c => `<div class="dossier-entry"><div class="d-label">${c.location}</div><div style="color:var(--accent-cyan);">${c.clue}</div></div>`).join('')}
+    </div>
+    <div class="dossier-section">
+      <h3>Culture & History</h3>
+      ${state.clues.culture.length === 0 ? '<div class="dossier-entry" style="color:var(--text-muted);">No culture clues yet.</div>' :
+        state.clues.culture.map(c => `<div class="dossier-entry"><div class="d-label">${c.location}</div><div style="color:var(--accent-gold);">${c.clue}</div></div>`).join('')}
+    </div>
+    <div class="dossier-section">
+      <h3>Travel Log</h3>
+      <div class="dossier-entry" style="color:var(--accent-cyan);">${state.trail.join(' \u2192 ')}</div>
+    </div>
+  `;
+}
+
+$('dossierToggle').addEventListener('click', () => { $('dossierPanel').classList.toggle('open'); });
+$('dossierClose').addEventListener('click', () => { $('dossierPanel').classList.remove('open'); });
+
+render();
+</script>
+</body>
+</html>
